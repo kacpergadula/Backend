@@ -1,6 +1,6 @@
-def imageName="192.168.44.44:8082/docker-local/backend"
+def imageName="kacpergadula/backend"
 def dockerRegistry="https://192.168.44.44:8082"
-def registryCredentials="artifactory"
+def registryCredentials="DockerHub"
 def dockerTag=""
 
 pipeline {
@@ -55,6 +55,23 @@ pipeline {
                         applicationImage.push('latest')
                     }
                 }
+            }
+        }
+        stage ('Push to repo') {
+            steps {
+                dir('ArgoCD') {
+                    withCredentials([gitUsernamePassword(credentialsId: 'git', gitToolName: 'Default')]) {
+                        git branch: 'master', url: 'https://github.com/kacpergadula/ArgoCD.git'
+                        sh """ cd backend
+                        git config --global user.email "k.gadula@interia.pl"
+                        git config --global user.name "kacpergadula"
+                        sed -i "s#$imageName.*#$imageName:$dockerTag#g" deployment.yaml
+                        git commit -am "Set new $dockerTag tag."
+                        git diff
+                        git push origin master
+                        """
+                    }                  
+                } 
             }
         }
     }
